@@ -136,7 +136,7 @@ if __name__ == "__main__":
     # Chama colecao das variaveis
     variables = InputVariables()
 
-    variables.endpoint = "https://elk-motor-oc-dev.ovd.com.br"
+    variables.endpoint = ""
     variables.username = ""
     variables.password = ""
     variables.directory = "C:/Users/ovd8439/Documents/Analista_Documentacao/36 - ElasticSearch"
