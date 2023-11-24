@@ -137,8 +137,8 @@ if __name__ == "__main__":
     variables = InputVariables()
 
     variables.endpoint = "https://elk-motor-oc-dev.ovd.com.br"
-    variables.username = "elastic"
-    variables.password = "G6U2j01xr70942e4pqAFqPlR"
+    variables.username = ""
+    variables.password = ""
     variables.directory = "C:/Users/ovd8439/Documents/Analista_Documentacao/36 - ElasticSearch"
     variables.number_records = 10
     variables.last_record = 0
