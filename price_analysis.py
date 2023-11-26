@@ -1,8 +1,19 @@
+import datetime
 import json
 import sys
+import csv
 
-from pandas import json_normalize
 import requests
+import logging
+
+
+data_atual = datetime.datetime.now()
+data_sem_caracteres = data_atual.strftime("%Y%m%d%H%M%S")
+
+filename_log = "logs/log_" + data_sem_caracteres
+
+logging.basicConfig(filename=filename_log, level=logging.INFO,
+                    format="%(asctime)s: %(levelname)s: %(message)s")
 
 
 class InputVariables:
@@ -24,7 +35,8 @@ class InputVariables:
         if isinstance(set_endpoint, str):
             self._endpoint = set_endpoint
         else:
-            print("Error: Endpoint must be a string.")
+            logging.error("Error: Endpoint must be a string.")
+            sys.exit()
 
     @property
     def username(self):
@@ -35,7 +47,8 @@ class InputVariables:
         if isinstance(set_username, str):
             self._username = set_username
         else:
-            print("Error: Username must be a string.")
+            logging.error("Error: Username must be a string.")
+            sys.exit()
 
     @property
     def password(self):
@@ -46,7 +59,8 @@ class InputVariables:
         if isinstance(set_password, str):
             self._password = set_password
         else:
-            print("Error: Password must be a string.")
+            logging.error("Error: Password must be a string.")
+            sys.exit()
 
     @property
     def directory(self):
@@ -57,7 +71,8 @@ class InputVariables:
         if isinstance(set_directory, str):
             self._directory = set_directory
         else:
-            print("Error: Directory must be a string.")
+            logging.error("Error: Directory must be a string.")
+            sys.exit()
 
     @property
     def number_records(self):
@@ -68,7 +83,8 @@ class InputVariables:
         if isinstance(set_number_records, int):
             self._number_records = set_number_records
         else:
-            print("Error: The number_records must be an integer value.")
+            logging.error("Error: The number_records must be an integer value.")
+            sys.exit()
 
     @property
     def last_record(self):
@@ -79,7 +95,7 @@ class InputVariables:
         if isinstance(set_last_record, int):
             self._last_record = set_last_record
         else:
-            print("Error: The last_record must be an integer value.")
+            logging.error("Error: The last_record must be an integer value.")
 
     @property
     def json_response(self):
@@ -90,7 +106,7 @@ class InputVariables:
         if isinstance(set_json_response, dict):
             self._json_response = set_json_response
         else:
-            print("Error: Json")
+            logging.error("Error: Json")
 
 
 def call_api(variables):
@@ -98,8 +114,8 @@ def call_api(variables):
 
     payload = json.dumps({
         "params": {
-            "ultimo_valor": 0,
-            "qtde_registros": 1
+            "ultimo_valor": variables.last_record,
+            "qtde_registros": variables.number_records
         },
         "id": "qry_batimento_precos"
     })
@@ -109,62 +125,142 @@ def call_api(variables):
     }
 
     try:
-        response = requests.request("GET", url, auth=(variables.username, variables.password), headers=headers, data=payload)
-        print(response.text)
-
+        response = requests.request("GET", url, auth=(variables.username, variables.password),
+                                    headers=headers, data=payload)
         response.raise_for_status()
+
         return response
 
     except requests.exceptions.HTTPError as e:
-        print("Error HTTP: {}".format(e.response.status_code))
-        print("Erro do servidor:", e.response.text)
+        logging.error("Error HTTP: {}".format(e.response.status_code))
+        logging.error("Error service:", e.response.text)
         return None
 
     except requests.exceptions.RequestException as e:
-        print("Error na requisicao: {}".fotmat(e))
+        logging.error("Error requisition: {}".format(e))
         return None
+        # with open("json_example.txt", "r") as f:
+        #     data = json.load(f)
+        # return data
+
 
 def parse_data(json_data):
-    # Carrega o JSON
 
-    #df = pd.read_json(json_data)
-    df = json_normalize(json_data, "_source")
+    id_value = None
 
-    print(df)
+    # Executa um parsing no Json
+    for hits in json_data["hits"]["hits"]:
+        id_value = hits["_id"]
+        for inner_hits in hits["inner_hits"]["listasPrecos.precos"]["hits"]["hits"]:
+            writer.writerow([
+                id_value,
+                inner_hits["_source"]["preco"],
+                inner_hits["_source"]["uf"],
+                inner_hits["_source"]["fimVigencia"],
+                inner_hits["_source"]["inicioVigencia"],
+                inner_hits["_source"]["tipoPreco"],
+                inner_hits["_source"]["listaPreco"]
+            ])
+    return int(id_value)
+
+
+def valid_variables(variables):
+    if variables is not None or variables != "":
+        if variables.endpoint is None:
+            logging.error("Endpoint not defined")
+            sys.exit()
+
+        elif variables.username is None:
+            logging.error("Username not defined")
+            sys.exit()
+
+        elif variables.password is None:
+            logging.error("Password not defined")
+            sys.exit()
+
+        elif variables.directory is None:
+            logging.error("Directory not defined")
+            sys.exit()
+
+        elif variables.number_records is None:
+            variables.number_records = 5000
+            logging.info("Registration quantity per query not defined. Default: " + str(variables.number_records))
+
+        elif variables.last_record is None:
+            variables.last_record = 0
+            logging.info("Last record processed unidentified. Default: " + str(variables.last_record))
+
 
 if __name__ == "__main__":
+    logging.info("The program has started.")
     # Chama colecao das variaveis
     variables = InputVariables()
 
-    variables.endpoint = ""
-    variables.username = ""
-    variables.password = ""
-    variables.directory = "C:/Users/ovd8439/Documents/Analista_Documentacao/36 - ElasticSearch"
-    variables.number_records = 10
-    variables.last_record = 0
+    if len(sys.argv[1:]) == 6:
+        #Intruções python price_analysis.py endpoint user pass qt_registro diretorio_destino
+        variables.endpoint = sys.argv[1]
+        variables.username = sys.argv[2]
+        variables.password = sys.argv[3]
+        variables.directory = sys.argv[4]
+        variables.number_records = int(sys.argv[5])
+        variables.last_record = int(sys.argv[6])
+    else:
+        # logging.error('Not all input variables were defined')
+        # sys.exit()
+        variables.endpoint = "endpoint"
+        variables.username = "user"
+        variables.password = "pass"
+        variables.directory = "dir"
+        variables.number_records = 10000
+        variables.last_record = 0
 
+    #Valida variaveis de entrada
+    valid_variables(variables)
+
+    #Variavel que será utilizada caso uma chamada api de erro 500 timeout
     resend = 0
 
-    # Efetua chamada para API com as variaveis
-    api_response = call_api(variables)
+    #Varivel para garantir que não ira efetuar a mesma chamada
+    last_register = None
 
-    if api_response is not None:
-        if api_response.status_code == 200:
-            resend = 0
-            print(api_response)
-        elif api_response.status_code == 500 and resend < 1:
-            print("Error: Timeout response API, efetuando reenvio")
-            resend = 1
-            number_rescords_origin = variables.number_records
-            variables.number_records = variables.number_records // 2
-            # Chama novamente com metade dos registro em caso de erro
+    #Variavel de diretorio
+    file_csv = variables.directory + "/price_analysis_"
+
+    # Cria um escritor CSV.
+    with open(file_csv, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile, delimiter=";")
+        writer.writerow(["id_produto", "preco", "uf", "fimVigencia", "inicioVigencia", "tipoPreco", "listaPreco"])
+
+        while variables.last_record is not None:
+
+            if variables.last_record != last_register:
+                last_register = variables.last_record
+            else:
+                logging.error('Error: Lopping, last register: {}'.format(str(last_register)))
+                sys.exit()
+
+            # Efetua chamada para API com as variaveis
             api_response = call_api(variables)
-        elif api_response.status_code == 404:
-            print("Erro 404: Recurso nao encontrado.")
-            sys.exit()
-        else:
-            print("General Error")
-            sys.exit()
 
-    print(api_response.text)
-    parse_data(api_response.text)
+            if api_response is not None:
+                if api_response.status_code == 200:
+                    resend = 0 #Declara variavel novamente para 0
+                    logging.info("API callback: " + str(api_response))
+                elif api_response.status_code == 500 and resend < 1:
+                    logging.error("Error: Timeout response API, resending")
+                    resend = 1
+                    number_rescords_origin = variables.number_records
+                    variables.number_records = variables.number_records // 2
+                    # Chama novamente com metade dos registro em caso de erro
+                    api_response = call_api(variables)
+                elif api_response.status_code == 404:
+                    logging.error("Error 404: Resource not found.")
+                    sys.exit()
+                else:
+                    logging.error("General Error")
+                    sys.exit()
+
+            variables.last_record = parse_data(api_response.text)
+            # variables.last_record = parse_data(api_response)
+
+    logging.info("The program has been completed.")

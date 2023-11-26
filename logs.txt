@@ -1,0 +1,2 @@
+2023-11-26 15:35:16,875: INFO: The program has started.
+2023-11-26 15:35:16,887: ERROR: Error: Lopping, last register: 1000778
