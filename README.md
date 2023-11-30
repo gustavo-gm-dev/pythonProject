@@ -18,3 +18,19 @@ Este projeto tem como objetivo realizar todo o processo de extração de preços
 - **Parsing de JSON** : Os dados recebidos da API, geralmente em formato JSON, são estruturados e organizados em linhas para facilitar a manipulação posterior.
 - **Gravação em CSV** : Os dados processados são gravados em um arquivo CSV, permitindo fácil importação e análise em ferramentas como planilhas eletrônicas.
 - **Logs Detalhados** : Todos os passos do processo são registrados em logs detalhados, facilitando a identificação e resolução de problemas caso ocorram.
+
+
+<h2> Tecnologias utilizadas </h2>
+
+- **`Python 2.7`**
+
+
+<h2> Pré-requisitos </h2>
+
+- Possuir python versão 2.7
+
+<p>Bibliotecas</p>
+
+- pip : `python -m pip install --upgrade SomePackage`
+- requests : `pip install requests`
+- logging : `pip install logging`
